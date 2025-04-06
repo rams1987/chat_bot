@@ -38,6 +38,35 @@ st.title("🧠 Streamlit loves LLMs!")
 
 st.caption("Note that this demo app isn't actually connected to any LLMs. Those are expensive ;)")
 
+
+st.markdown("---")
+
+with st.form("finance_form", clear_on_submit=False):
+    age = st.number_input("Age", min_value=1, max_value=120, step=1)
+    income = st.number_input("Monthly Income (in USD)", min_value=0.0, step=100.0)
+    expenses = st.radio("Monthly Expenses", options=["Low", "Medium", "High"])
+    goals = st.text_input("Your Financial Goals")
+    country = st.selectbox("Country", options=["United States", "India", "United Kingdom", "Canada", "Australia", "Other"])
+    
+    submitted = st.form_submit_button("Submit")
+
+if submitted:
+    st.success("✅ Form Submitted!")
+    st.write("**Here’s what you submitted:**")
+    st.markdown(f"""
+    - **Age:** {age}  
+    - **Income:** ${income:,.2f}  
+    - **Expenses:** {expenses}  
+    - **Goals:** {goals}  
+    - **Country:** {country}
+    """)
+
+# Default empty context if not submitted
+if "user_context" not in st.session_state:
+    st.session_state.user_context = {}
+
+
+
 # Display messages from current session
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
