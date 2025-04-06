@@ -102,22 +102,12 @@ if st.session_state.form_submitted:
             st.markdown(prompt)
 
         # call the gemini api
-        response = call_gemini_api(prompt)
+        response = call_gemini_api(prompt, st.session_state.user_context)
 
         # Simulate assistant response
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
             message_placeholder.markdown(response)
-        #     assistant_response = random.choice([
-        #         "Hello there! How can I assist you today?",
-        #         "Hi, human! Is there anything I can help you with?",
-        #         "Do you need help?",
-        #     ])
-        #     for word in assistant_response.split():
-        #         full_response += word + " "
-        #         time.sleep(0.05)
-        #         message_placeholder.markdown(full_response + "▌")
-            
 
         # Add assistant message
         st.session_state.messages.append({"role": "assistant", "content": response})

@@ -33,13 +33,29 @@ def load_local_model():
 
 
 # --- API Call Function (Keep as is, remember to replace placeholder) ---
-def call_gemini_api(user_input):
-    api_key = os.getenv("GEMINI_API_KEY")  # Load the API key from the environment
-
+def call_gemini_api(user_input, context=None):
+    api_key = os.getenv("GEMINI_API_KEY")
     client = genai.Client(api_key=api_key)
 
+    # Create a context-aware prompt
+    if context:
+        context_prompt = f"""
+        User Context:
+        - Age: {context.get('age', 'Not specified')}
+        - Monthly Income: ${context.get('income', 'Not specified'):,.2f}
+        - Monthly Expenses: {context.get('expenses', 'Not specified')}
+        - Financial Goals: {context.get('goals', 'Not specified')}
+        - Country: {context.get('country', 'Not specified')}
+
+        Based on this context, please provide a relevant response to: {user_input}
+        """
+    else:
+        context_prompt = user_input
+
+    # Generate response with context
     response = client.models.generate_content(
-        model="gemini-2.0-flash", contents=user_input
+        model="gemini-2.0-flash",
+        contents=context_prompt
     )
 
     return response.text
