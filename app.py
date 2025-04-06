@@ -33,6 +33,8 @@ if st.sidebar.button("➕ New Chat"):
 current_session = st.session_state.current_session
 st.session_state.messages = st.session_state.chat_sessions[current_session]
 
+
+
 # --- Main Chat Interface ---
 st.title("🧠 Streamlit loves LLMs!")
 
@@ -40,6 +42,13 @@ st.caption("Note that this demo app isn't actually connected to any LLMs. Those 
 
 
 st.markdown("---")
+
+# Default context and form submission flag
+if "user_context" not in st.session_state:
+    st.session_state.user_context = {}
+
+if "form_submitted" not in st.session_state:
+    st.session_state.form_submitted = False
 
 with st.form("finance_form", clear_on_submit=False):
     age = st.number_input("Age", min_value=1, max_value=120, step=1)
@@ -51,6 +60,18 @@ with st.form("finance_form", clear_on_submit=False):
     submitted = st.form_submit_button("Submit")
 
 if submitted:
+
+    st.session_state.user_context = {
+        "age": age,
+        "income": income,
+        "expenses": expenses,
+        "goals": goals,
+        "country": country,
+    }
+
+    st.session_state.form_submitted = True  # <-- Important line to enable chat
+
+
     st.success("✅ Form Submitted!")
     st.write("**Here’s what you submitted:**")
     st.markdown(f"""
@@ -65,40 +86,44 @@ if submitted:
 if "user_context" not in st.session_state:
     st.session_state.user_context = {}
 
+# Only show chat if the form is submitted
+if st.session_state.form_submitted:
 
+    # Display messages from current session
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-# Display messages from current session
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    # Accept user input
+    if prompt := st.chat_input("Say something"):
+        # Add user message
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-# Accept user input
-if prompt := st.chat_input("Say something"):
-    # Add user message
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+        # call the gemini api
+        response = call_gemini_api(prompt)
 
-    # call the gemini api
-    response = call_gemini_api(prompt)
+        # Simulate assistant response
+        with st.chat_message("assistant"):
+            message_placeholder = st.empty()
+            message_placeholder.markdown(response)
+        #     assistant_response = random.choice([
+        #         "Hello there! How can I assist you today?",
+        #         "Hi, human! Is there anything I can help you with?",
+        #         "Do you need help?",
+        #     ])
+        #     for word in assistant_response.split():
+        #         full_response += word + " "
+        #         time.sleep(0.05)
+        #         message_placeholder.markdown(full_response + "▌")
+            
 
-    # Simulate assistant response
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        message_placeholder.markdown(response)
-    #     assistant_response = random.choice([
-    #         "Hello there! How can I assist you today?",
-    #         "Hi, human! Is there anything I can help you with?",
-    #         "Do you need help?",
-    #     ])
-    #     for word in assistant_response.split():
-    #         full_response += word + " "
-    #         time.sleep(0.05)
-    #         message_placeholder.markdown(full_response + "▌")
-         
+        # Add assistant message
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
-    # Add assistant message
-    st.session_state.messages.append({"role": "assistant", "content": response})
+        # Update chat_sessions with new message
+        st.session_state.chat_sessions[current_session] = st.session_state.messages
 
-    # Update chat_sessions with new message
-    st.session_state.chat_sessions[current_session] = st.session_state.messages
+else:
+    st.write("Please fill out the form to start chatting.")
