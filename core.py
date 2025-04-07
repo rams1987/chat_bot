@@ -37,20 +37,77 @@ def call_gemini_api(user_input, context=None):
     api_key = os.getenv("GEMINI_API_KEY")
     client = genai.Client(api_key=api_key)
 
-    # Create a context-aware prompt
+    # Create a comprehensive system prompt for financial expertise
+    system_prompt = """You are an experienced financial advisor with expertise in:
+    1. Personal budgeting and financial planning
+    2. Investment strategies
+    3. Debt management
+    4. Retirement planning
+    5. Emergency fund planning
+    
+    When providing budget advice:
+    - Break down expenses into essential and non-essential categories
+    - Use the 50/30/20 rule (50% needs, 30% wants, 20% savings)
+    - Provide specific dollar amounts based on the user's income
+    - Suggest practical ways to reduce expenses
+    - Recommend savings goals and investment options
+    - Consider local cost of living based on the user's country
+    
+    Always provide actionable, specific advice with numbers and percentages."""
+
+    # Create a detailed context-aware prompt
     if context:
+        monthly_income = float(context.get('income', 0))
+        
+        # Calculate suggested budget allocations
+        needs = monthly_income * 0.5
+        wants = monthly_income * 0.3
+        savings = monthly_income * 0.2
+        
         context_prompt = f"""
-        User Context:
+        {system_prompt}
+
+        User's Financial Profile:
         - Age: {context.get('age', 'Not specified')}
-        - Monthly Income: ${context.get('income', 'Not specified'):,.2f}
-        - Monthly Expenses: {context.get('expenses', 'Not specified')}
+        - Monthly Income: ${monthly_income:,.2f}
+        - Monthly Expenses Level: {context.get('expenses', 'Not specified')}
         - Financial Goals: {context.get('goals', 'Not specified')}
         - Country: {context.get('country', 'Not specified')}
 
-        Based on this context, please provide a relevant response to: {user_input}
+        Suggested Monthly Budget Breakdown (50/30/20 Rule):
+        1. Needs (50%): ${needs:,.2f}
+           - Rent/Housing
+           - Utilities
+           - Groceries
+           - Transportation
+           - Insurance
+           - Minimum Debt Payments
+
+        2. Wants (30%): ${wants:,.2f}
+           - Entertainment
+           - Dining Out
+           - Shopping
+           - Hobbies
+           - Subscriptions
+
+        3. Savings/Debt (20%): ${savings:,.2f}
+           - Emergency Fund
+           - Retirement Savings
+           - Investment
+           - Extra Debt Payments
+           - Financial Goals
+
+        Current Question: {user_input}
+
+        Please provide specific financial advice considering the user's profile and the suggested budget breakdown above. Include:
+        1. Specific recommendations for their situation
+        2. Dollar amounts and percentages where relevant
+        3. Action items they can implement immediately
+        4. Long-term financial planning suggestions
+        5. Any relevant warnings or areas of concern
         """
     else:
-        context_prompt = user_input
+        context_prompt = f"{system_prompt}\n\nQuestion: {user_input}"
 
     # Generate response with context
     response = client.models.generate_content(
