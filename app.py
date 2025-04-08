@@ -1,6 +1,9 @@
 import streamlit as st
 from core import call_gemini_api
 from typing import Dict
+from fpdf import FPDF
+import base64
+import unicodedata
 
 def initialize_session_state():
     """Initialize session state variables."""
@@ -41,6 +44,56 @@ def render_financial_form():
             st.session_state.form_submitted = True
             return True
     return False
+
+def render_initial_insights():
+    """Generate and display initial insights based on the user's financial profile."""
+    initial_insights = call_gemini_api(
+        "Provide initial financial insights based on the user's profile.",
+        st.session_state.user_context
+    )
+    st.session_state.messages.append({"role": "assistant", "content": initial_insights})
+    st.markdown("### Initial Financial Insights")
+    st.markdown(initial_insights)
+    return initial_insights
+
+import unicodedata
+
+def sanitize_text(text: str) -> str:
+    # Replace special dash-like characters with regular dash
+    text = text.replace('\u2013', '-').replace('\u2014', '-')
+    # Normalize and strip other special characters
+    return unicodedata.normalize("NFKD", text).encode("latin1", "ignore").decode("latin1")
+
+
+def generate_pdf(user_context: Dict, insights: str) -> bytes:
+    """Generate a PDF report of the user's financial profile and insights."""
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    
+    pdf.cell(200, 10, txt="Financial Advisor Report", ln=True, align='C')
+    pdf.ln(10)
+    
+    pdf.cell(200, 10, txt="User Financial Profile", ln=True, align='L')
+    pdf.ln(5)
+    for key, value in user_context.items():
+        safe_line = sanitize_text(f"{key.capitalize()}: {value}")
+        pdf.cell(200, 10, txt=safe_line, ln=True, align='L')
+    pdf.ln(10)
+    
+    pdf.cell(200, 10, txt="Initial Financial Insights", ln=True, align='L')
+    pdf.ln(5)
+    safe_insights = sanitize_text(insights)
+    pdf.multi_cell(0, 10, txt=safe_insights)
+    #pdf.multi_cell(0, 10, txt=insights)
+    
+    return pdf.output(dest='S').encode('latin1')
+
+def download_pdf_link(pdf_data: bytes, filename: str) -> str:
+    """Generate a download link for the PDF file."""
+    b64 = base64.b64encode(pdf_data).decode()
+    href = f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}">Download PDF Report</a>'
+    return href
 
 def render_chat_interface():
     """Render the chat interface."""
@@ -113,6 +166,9 @@ def main():
     if not st.session_state.form_submitted:
         if render_financial_form():
             st.success("✅ Form Submitted!")
+            insights = render_initial_insights()  # Generate and display initial insights
+            pdf_data = generate_pdf(st.session_state.user_context, insights)
+            st.markdown(download_pdf_link(pdf_data, "Financial_Advisor_Report.pdf"), unsafe_allow_html=True)
             st.rerun()  # Rerun the app to show the chat interface
     else:
         render_chat_interface()
