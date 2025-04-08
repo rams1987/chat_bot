@@ -64,30 +64,64 @@ def sanitize_text(text: str) -> str:
     # Normalize and strip other special characters
     return unicodedata.normalize("NFKD", text).encode("latin1", "ignore").decode("latin1")
 
-
-def generate_pdf(user_context: Dict, insights: str) -> bytes:
-    """Generate a PDF report of the user's financial profile and insights."""
+def generate_pdf(user_context, insights):
+    """Generate a PDF report with user context and insights."""
+    from fpdf import FPDF
+    
+    # Create PDF object
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", size=12)
     
-    pdf.cell(200, 10, txt="Financial Advisor Report", ln=True, align='C')
+    # Set font
+    pdf.set_font('Arial', 'B', 16)
+    
+    # Title
+    pdf.cell(190, 10, 'Financial Advisory Report', 0, 1, 'C')
     pdf.ln(10)
     
-    pdf.cell(200, 10, txt="User Financial Profile", ln=True, align='L')
+    # User Context Section
+    pdf.set_font('Arial', 'B', 14)
+    pdf.cell(190, 10, 'Your Financial Profile', 0, 1, 'L')
     pdf.ln(5)
-    for key, value in user_context.items():
-        safe_line = sanitize_text(f"{key.capitalize()}: {value}")
-        pdf.cell(200, 10, txt=safe_line, ln=True, align='L')
+    
+    pdf.set_font('Arial', '', 12)
+    context_items = [
+        f"Age: {user_context['age']}",
+        f"Income: ${user_context['income']:,.2f}",
+        f"Expenses: {sanitize_text(user_context['expenses'])}",
+        f"Goals: {sanitize_text(user_context['goals'])}",
+        f"Country: {sanitize_text(user_context['country'])}"
+    ]
+    
+    for item in context_items:
+        pdf.cell(190, 10, sanitize_text(item), 0, 1, 'L')
     pdf.ln(10)
     
-    pdf.cell(200, 10, txt="Initial Financial Insights", ln=True, align='L')
+    # Insights Section
+    pdf.set_font('Arial', 'B', 14)
+    pdf.cell(190, 10, 'Financial Insights', 0, 1, 'L')
     pdf.ln(5)
-    safe_insights = sanitize_text(insights)
-    pdf.multi_cell(0, 10, txt=safe_insights)
-    #pdf.multi_cell(0, 10, txt=insights)
     
-    return pdf.output(dest='S').encode('latin1')
+    pdf.set_font('Arial', '', 12)
+    # Split insights into lines that fit the page width
+    sanitized_insights = sanitize_text(insights)
+    lines = []
+    words = sanitized_insights.split()
+    current_line = []
+    
+    for word in words:
+        current_line.append(word)
+        if len(' '.join(current_line)) > 80:  # Approximate characters that fit in line
+            lines.append(' '.join(current_line[:-1]))
+            current_line = [word]
+    if current_line:
+        lines.append(' '.join(current_line))
+    
+    for line in lines:
+        pdf.cell(190, 10, line, 0, 1, 'L')
+    
+    # Return PDF as bytes
+    return pdf.output(dest='S').encode('latin-1')
 
 def download_pdf_link(pdf_data: bytes, filename: str) -> str:
     """Generate a download link for the PDF file."""
@@ -129,6 +163,16 @@ def main():
     # Sidebar
     st.sidebar.title("🗂️ Chat Sessions")
     
+    # Download PDF Button in sidebar
+    if st.session_state.form_submitted:
+        pdf_data = generate_pdf(st.session_state.user_context, st.session_state.messages[-1]["content"])
+        st.sidebar.download_button(
+            label="📥 Download PDF Report",
+            data=pdf_data,
+            file_name="Financial_Advisor_Report.pdf",
+            mime="application/pdf"
+        )
+    
     # New chat button
     if st.sidebar.button("➕ New Chat"):
         new_name = f"Chat {len(st.session_state.chat_sessions) + 1}"
@@ -166,10 +210,8 @@ def main():
     if not st.session_state.form_submitted:
         if render_financial_form():
             st.success("✅ Form Submitted!")
-            insights = render_initial_insights()  # Generate and display initial insights
-            pdf_data = generate_pdf(st.session_state.user_context, insights)
-            st.markdown(download_pdf_link(pdf_data, "Financial_Advisor_Report.pdf"), unsafe_allow_html=True)
-            st.rerun()  # Rerun the app to show the chat interface
+            insights = render_initial_insights()
+            st.rerun()
     else:
         render_chat_interface()
 
