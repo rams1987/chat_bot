@@ -103,8 +103,8 @@ class FinancialAdvisor:
         - Country: {context.get('country', 'Not specified')}
         """
 
-    def _build_prompt(self, user_input: str, context: Optional[Dict] = None) -> str:
-        """Build the complete prompt including system prompt, context, and user input."""
+    def _build_prompt(self, user_input: str, context: Optional[Dict] = None, chat_history=None) -> str:
+        """Build the complete prompt including system prompt, context, chat history, and user input."""
         system_prompt = self._get_system_prompt()
         
         if not context:
@@ -113,28 +113,38 @@ class FinancialAdvisor:
         monthly_income = float(context.get('income', 0))
         budget = self._calculate_budget_allocation(monthly_income)
         
-        return f"""
+        prompt = f"""
         {system_prompt}
 
         {self._format_user_profile(context)}
 
         Suggested Monthly Budget Breakdown (50/30/20 Rule):
         {self._format_budget_categories(budget)}
+        """
 
-        Current Question: {user_input}
+        # Add chat history if available
+        if chat_history and len(chat_history) > 1:
+            prompt += "\nPrevious Conversation:\n"
+            for message in chat_history[:-1]:  # Exclude the current message
+                role = "User" if message["role"] == "user" else "Assistant"
+                prompt += f"{role}: {message['content']}\n"
 
-        Please provide specific financial advice considering the user's profile and the suggested budget breakdown above. Include:
+        prompt += f"\nCurrent Question: {user_input}\n"
+        prompt += """
+        Please provide specific financial advice considering the user's profile, budget breakdown, and previous conversation context. Include:
         1. Specific recommendations for their situation
         2. Dollar amounts and percentages where relevant
         3. Action items they can implement immediately
         4. Long-term financial planning suggestions
         5. Any relevant warnings or areas of concern
         """
+        
+        return prompt
 
-    def get_response(self, user_input: str, context: Optional[Dict] = None) -> str:
+    def get_response(self, user_input: str, context: Optional[Dict] = None, chat_history=None) -> str:
         """Generate a response using the Gemini model."""
         try:
-            prompt = self._build_prompt(user_input, context)
+            prompt = self._build_prompt(user_input, context, chat_history)
 
             response = self.client.models.generate_content(
                 model="gemini-2.0-flash",
@@ -148,8 +158,8 @@ class FinancialAdvisor:
 # Initialize the financial advisor
 financial_advisor = FinancialAdvisor()
 
-def call_gemini_api(user_input: str, context: Optional[Dict] = None) -> str:
-    """Main function to call the Gemini API with financial context."""
-    return financial_advisor.get_response(user_input, context)
+def call_gemini_api(user_input: str, context: Optional[Dict] = None, chat_history=None) -> str:
+    """Main function to call the Gemini API with financial context and chat history."""
+    return financial_advisor.get_response(user_input, context, chat_history)
 
 

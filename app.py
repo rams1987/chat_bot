@@ -56,8 +56,6 @@ def render_initial_insights():
     st.markdown(initial_insights)
     return initial_insights
 
-import unicodedata
-
 def sanitize_text(text: str) -> str:
     # Replace special dash-like characters with regular dash
     text = text.replace('\u2013', '-').replace('\u2014', '-')
@@ -65,7 +63,7 @@ def sanitize_text(text: str) -> str:
     return unicodedata.normalize("NFKD", text).encode("latin1", "ignore").decode("latin1")
 
 def generate_pdf(user_context, insights):
-    """Generate a PDF report with user context and insights."""
+    """Generate a PDF report with user context and latest insights."""
     from fpdf import FPDF
     
     # Create PDF object
@@ -97,9 +95,9 @@ def generate_pdf(user_context, insights):
         pdf.cell(190, 10, sanitize_text(item), 0, 1, 'L')
     pdf.ln(10)
     
-    # Insights Section
+    # Latest Insights Section
     pdf.set_font('Arial', 'B', 14)
-    pdf.cell(190, 10, 'Financial Insights', 0, 1, 'L')
+    pdf.cell(190, 10, 'Latest Financial Insights', 0, 1, 'L')
     pdf.ln(5)
     
     pdf.set_font('Arial', '', 12)
@@ -165,13 +163,17 @@ def main():
     
     # Download PDF Button in sidebar
     if st.session_state.form_submitted:
-        pdf_data = generate_pdf(st.session_state.user_context, st.session_state.messages[-1]["content"])
-        st.sidebar.download_button(
-            label="📥 Download PDF Report",
-            data=pdf_data,
-            file_name="Financial_Advisor_Report.pdf",
-            mime="application/pdf"
-        )
+        if st.sidebar.button("📥 Download PDF Report"):
+            pdf_data = generate_pdf(
+                st.session_state.user_context, 
+                st.session_state.messages[-1]["content"]
+            )
+            st.sidebar.download_button(
+                label="Download PDF",
+                data=pdf_data,
+                file_name="Financial_Advisor_Report.pdf",
+                mime="application/pdf"
+            )
     
     # New chat button
     if st.sidebar.button("➕ New Chat"):
