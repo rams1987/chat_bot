@@ -4,6 +4,9 @@ from typing import Dict
 from fpdf import FPDF
 import base64
 import unicodedata
+import datetime
+
+
 
 def initialize_session_state():
     """Initialize session state variables."""
@@ -18,6 +21,15 @@ def initialize_session_state():
     
     if "form_submitted" not in st.session_state:
         st.session_state.form_submitted = False
+
+    # State for managing the dynamic download button
+    if "pdf_data_to_download" not in st.session_state:
+        st.session_state.pdf_data_to_download = None
+    if "pdf_ready_for_download" not in st.session_state:
+        st.session_state.pdf_ready_for_download = False
+    # Store the content of the message the PDF was generated for
+    if "pdf_generated_for_message_content" not in st.session_state:
+        st.session_state.pdf_generated_for_message_content = None
 
 def render_financial_form():
     """Render and handle the financial information form."""
@@ -145,6 +157,7 @@ def handle_chat_input(prompt: str):
         st.markdown(prompt)
 
     response = call_gemini_api(prompt, st.session_state.user_context)
+    
 
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
@@ -160,21 +173,59 @@ def main():
     
     # Sidebar
     st.sidebar.title("🗂️ Chat Sessions")
-    
-    # Download PDF Button in sidebar
+
+    # PDF Download Logic
     if st.session_state.form_submitted:
-        if st.sidebar.button("📥 Download PDF Report"):
-            pdf_data = generate_pdf(
-                st.session_state.user_context, 
-                st.session_state.messages[-1]["content"]
-            )
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("**PDF Report**")
+
+        latest_message_content = None
+        try:
+            latest_message_content = st.session_state.messages[-1]["content"]
+            # Extract and display the first sentence from the latest content
+            # first_sentence = latest_message_content.split('.')[0] + '.' if '.' in latest_message_content else latest_message_content
+            # st.sidebar.markdown(f"*Latest insight:* {first_sentence[:100]}...") # Limit length
+        except IndexError:
+            st.sidebar.warning("No messages yet.")
+
+        # Determine if the current ready PDF matches the latest message
+        pdf_matches_latest = (
+            st.session_state.pdf_ready_for_download and 
+            st.session_state.pdf_generated_for_message_content == latest_message_content
+        )
+
+        # --- Conditional Button Rendering ---
+        if pdf_matches_latest and st.session_state.pdf_data_to_download:
+            # State: PDF is ready and matches the latest message -> Show Download Button
             st.sidebar.download_button(
-                label="Download PDF",
-                data=pdf_data,
+                label="📥 Download Report",
+                data=st.session_state.pdf_data_to_download,
                 file_name="Financial_Advisor_Report.pdf",
-                mime="application/pdf"
+                mime="application/pdf",
+                key="pdf_download_active",
+                # When download button is clicked, reset the state so it becomes "Prepare" again
+                on_click=lambda: setattr(st.session_state, 'pdf_ready_for_download', False) 
             )
-    
+        elif latest_message_content: 
+            # State: PDF not ready, or doesn't match latest -> Show Prepare Button
+            if st.sidebar.button("⚙️ Prepare Report", key="pdf_prepare"):
+                try:
+                    # Generate PDF and update state
+                    st.session_state.pdf_data_to_download = generate_pdf(
+                        st.session_state.user_context,
+                        latest_message_content
+                    )
+                    st.session_state.pdf_generated_for_message_content = latest_message_content
+                    st.session_state.pdf_ready_for_download = True
+                    # Use st.rerun() to immediately re-render the sidebar with the download button
+                    st.rerun() 
+                except Exception as e:
+                    st.sidebar.error(f"Error generating PDF: {e}")
+                    st.session_state.pdf_ready_for_download = False
+                    st.session_state.pdf_data_to_download = None
+                    st.session_state.pdf_generated_for_message_content = None
+        # else: # Case where there are no messages yet - do nothing for buttons
+
     # New chat button
     if st.sidebar.button("➕ New Chat"):
         new_name = f"Chat {len(st.session_state.chat_sessions) + 1}"
@@ -182,13 +233,21 @@ def main():
             {"role": "assistant", "content": "New chat started 👇"}
         ]
         st.session_state.current_session = new_name
-    
+        # Reset PDF state
+        st.session_state.pdf_ready_for_download = False
+        st.session_state.pdf_data_to_download = None
+        st.session_state.pdf_generated_for_message_content = None
+
     # Session selector
     session_names = list(st.session_state.chat_sessions.keys())
     selected_session = st.sidebar.selectbox("Select a session", session_names)
     
     if selected_session != st.session_state.current_session:
         st.session_state.current_session = selected_session
+         # Reset PDF state
+        st.session_state.pdf_ready_for_download = False
+        st.session_state.pdf_data_to_download = None
+        st.session_state.pdf_generated_for_message_content = None
     
     # Main content
     st.title("🧠 Financial Advisor Chat")
