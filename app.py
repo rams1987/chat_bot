@@ -1,10 +1,9 @@
 import streamlit as st
 from core import call_gemini_api
 from typing import Dict
-from fpdf import FPDF
 import base64
-import unicodedata
 import datetime
+from pdf_utils import generate_pdf
 
 
 
@@ -67,71 +66,6 @@ def render_initial_insights():
     st.markdown("### Initial Financial Insights")
     st.markdown(initial_insights)
     return initial_insights
-
-def sanitize_text(text: str) -> str:
-    # Replace special dash-like characters with regular dash
-    text = text.replace('\u2013', '-').replace('\u2014', '-')
-    # Normalize and strip other special characters
-    return unicodedata.normalize("NFKD", text).encode("latin1", "ignore").decode("latin1")
-
-def generate_pdf(user_context, insights):
-    """Generate a PDF report with user context and latest insights."""
-    from fpdf import FPDF
-    
-    # Create PDF object
-    pdf = FPDF()
-    pdf.add_page()
-    
-    # Set font
-    pdf.set_font('Arial', 'B', 16)
-    
-    # Title
-    pdf.cell(190, 10, 'Financial Advisory Report', 0, 1, 'C')
-    pdf.ln(10)
-    
-    # User Context Section
-    pdf.set_font('Arial', 'B', 14)
-    pdf.cell(190, 10, 'Your Financial Profile', 0, 1, 'L')
-    pdf.ln(5)
-    
-    pdf.set_font('Arial', '', 12)
-    context_items = [
-        f"Age: {user_context['age']}",
-        f"Income: ${user_context['income']:,.2f}",
-        f"Expenses: {sanitize_text(user_context['expenses'])}",
-        f"Goals: {sanitize_text(user_context['goals'])}",
-        f"Country: {sanitize_text(user_context['country'])}"
-    ]
-    
-    for item in context_items:
-        pdf.cell(190, 10, sanitize_text(item), 0, 1, 'L')
-    pdf.ln(10)
-    
-    # Latest Insights Section
-    pdf.set_font('Arial', 'B', 14)
-    pdf.cell(190, 10, 'Latest Financial Insights', 0, 1, 'L')
-    pdf.ln(5)
-    
-    pdf.set_font('Arial', '', 12)
-    # Split insights into lines that fit the page width
-    sanitized_insights = sanitize_text(insights)
-    lines = []
-    words = sanitized_insights.split()
-    current_line = []
-    
-    for word in words:
-        current_line.append(word)
-        if len(' '.join(current_line)) > 80:  # Approximate characters that fit in line
-            lines.append(' '.join(current_line[:-1]))
-            current_line = [word]
-    if current_line:
-        lines.append(' '.join(current_line))
-    
-    for line in lines:
-        pdf.cell(190, 10, line, 0, 1, 'L')
-    
-    # Return PDF as bytes
-    return pdf.output(dest='S').encode('latin-1')
 
 def download_pdf_link(pdf_data: bytes, filename: str) -> str:
     """Generate a download link for the PDF file."""
