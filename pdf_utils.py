@@ -38,10 +38,9 @@ class PDF(FPDF):
 
 def generate_pdf(user_context, insights):
     """Generate a more presentable PDF report with user context and latest insights."""
-    # Use the custom PDF class with header/footer
     pdf = PDF()
     pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15) # Enable auto page break
+    pdf.set_auto_page_break(auto=True, margin=15)
 
     # --- User Context Section --- 
     pdf.set_font('Arial', 'B', 14)
@@ -49,35 +48,59 @@ def generate_pdf(user_context, insights):
     pdf.cell(0, 10, 'Your Financial Profile', 0, 1, 'L', fill=True)
     pdf.ln(5)
     
-    pdf.set_font('Arial', '', 12)
+    pdf.set_font('Arial', '', 11) # Use slightly smaller font for table content
     pdf.set_text_color(0, 0, 0) # Reset text color
 
-    # Create a table-like structure for context
-    col_width_label = 40
-    col_width_value = 150 # Total width = 190 (standard A4 content width)
+    # Table properties
+    col_width_label = 45
+    col_width_value = 145 # Total width = 190
     line_height = 8
+    table_border = 1 # Draw borders for table cells
+    header_fill_color = (230, 230, 230) # Light gray for header (if we add one)
+    # Use light blue and white for alternating rows
+    row_fill_colors = [(220, 230, 255), (255, 255, 255)] # Light Blue and White
+    row_index = 0
+
+    # Table Header (Optional, but adds structure)
+    # pdf.set_font('Arial', 'B', 11)
+    # pdf.set_fill_color(*header_fill_color)
+    # pdf.cell(col_width_label, line_height, 'Category', border=table_border, align='C', fill=True)
+    # pdf.cell(col_width_value, line_height, 'Details', border=table_border, align='C', fill=True)
+    # pdf.ln(line_height)
 
     profile_data = {
-        "Age:": str(user_context.get('age', 'N/A')),
-        "Income:": f"${float(user_context.get('income', 0)):,.2f}",
-        "Expenses:": sanitize_text(user_context.get('expenses', 'N/A')),
-        "Goals:": sanitize_text(user_context.get('goals', 'N/A')),
-        "Country:": sanitize_text(user_context.get('country', 'N/A'))
+        "Age": str(user_context.get('age', 'N/A')),
+        "Monthly Income": f"${float(user_context.get('income', 0)):,.2f}",
+        "Monthly Expenses": sanitize_text(user_context.get('expenses', 'N/A')),
+        "Financial Goals": sanitize_text(user_context.get('goals', 'N/A')),
+        "Country": sanitize_text(user_context.get('country', 'N/A'))
     }
 
     for label, value in profile_data.items():
+        # Set row fill color
+        pdf.set_fill_color(*row_fill_colors[row_index % 2])
+        row_index += 1
+
+        # Remember starting position for multi_cell height calculation
+        start_y = pdf.get_y()
+        start_x = pdf.l_margin
+
+        # Draw label cell (fixed height)
         pdf.set_font('Arial', 'B', 11) # Bold label
-        pdf.cell(col_width_label, line_height, label, border=0)
+        pdf.cell(col_width_label, line_height, label, border=table_border, align='L', fill=True)
+        
+        # Draw value cell using multi_cell to handle wrapping
         pdf.set_font('Arial', '', 11) # Regular value
-        # Use multi_cell for value in case it wraps
-        current_x = pdf.get_x()
-        current_y = pdf.get_y()
-        pdf.multi_cell(col_width_value, line_height, value, border=0)
-        # Reset Y position for next line, ensuring alignment
-        pdf.set_y(current_y + line_height) 
-        # Reset X position (needed after multi_cell)
-        pdf.set_x(pdf.l_margin) 
-    
+        pdf.set_xy(start_x + col_width_label, start_y) # Position for value cell
+        pdf.multi_cell(col_width_value, line_height, value, border=table_border, align='L', fill=True)
+        
+        # Calculate height of the multi_cell
+        # This is tricky as FPDF doesn't directly return height of multi_cell
+        # We'll advance Y by the fixed line height for simplicity, assuming it won't drastically overflow.
+        # For very long values, a more complex height calculation would be needed.
+        pdf.set_y(start_y + line_height) # Move down for the next row
+        pdf.set_x(start_x) # Reset X position
+
     pdf.ln(10)
     
     # --- Latest Insights Section --- 
@@ -91,13 +114,11 @@ def generate_pdf(user_context, insights):
 
     # Use multi_cell for insights to handle paragraphs and wrapping
     sanitized_insights = sanitize_text(insights)
-    # Replace potential markdown-like list markers with standard ones for PDF
-    sanitized_insights = sanitized_insights.replace('\\n-', '\\n  • ').replace('\\n*', '\\n  • ')
+    # Replace potential markdown-like list markers with a latin-1 compatible character
+    sanitized_insights = sanitized_insights.replace('\n-', '\n  - ').replace('\n*', '\n  - ')
     
     pdf.multi_cell(0, 6, sanitized_insights) # 0 width = full width, 6 = line height
     pdf.ln(5)
 
     # Return PDF as bytes
-    # Important: FPDF generates latin-1 by default. If you need full UTF-8, 
-    # you might need a different library or configure FPDF differently (more complex).
     return pdf.output(dest='S').encode('latin-1') 
