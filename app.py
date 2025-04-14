@@ -1,5 +1,5 @@
 import streamlit as st
-from core import call_gemini_api
+from core import call_gemini_api, prepare_report
 from typing import Dict
 import base64
 import datetime
@@ -145,7 +145,7 @@ def main():
             if st.sidebar.button("⚙️ Prepare Report", key="pdf_prepare"):
                 try:
                     # Generate PDF and update state
-                    st.session_state.pdf_data_to_download = generate_pdf(
+                    st.session_state.pdf_data_to_download = prepare_report(
                         st.session_state.user_context,
                         latest_message_content
                     )

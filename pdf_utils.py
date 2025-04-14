@@ -122,17 +122,18 @@ def generate_pdf(user_context, insights):
     
     # Define potential subheading patterns (case-insensitive)
     subheading_patterns = [
-        r"Understanding the situation",
-        r"Immediate Action Items(?: & Recommendations)?", # Optional part
-        r"Recommendations", # Simpler version
-        r"Long-Term Financial Planning(?: & House Buying Goal)?", # Optional part
-        r"House Buying Goal", # Simpler version
-        r"Warnings(?: & Areas of Concern)?", # Optional part
-        r"Areas of Concern", # Simpler version
-        r"Summary"
+        r"Initial Financial Insights and Recommendations",
+        r"Evaluating Your Current Situation",
+        r"Detailed Budget Analysis & Recommendations",
+        r"Actionable Steps & Long-Term Planning",
+        r"Warnings and Areas of Concern",
+        r"Next Steps"
     ]
     # Combine into a single regex pattern for matching
-    subheading_regex = re.compile(r"^(\*\*)?(\d+\.?\s*)?(\"?)(%s)(\"?)(?:[\s*.:]*)\*\*?$" % "|".join(subheading_patterns), re.IGNORECASE)
+    subheading_regex = re.compile(
+        r"^\s*(\d+\.\s*)?(%s)\s*[:*.-]?\s*$" % "|".join(subheading_patterns),
+        re.IGNORECASE
+    )
     
     lines = sanitized_insights.split('\n')
     
@@ -142,7 +143,6 @@ def generate_pdf(user_context, insights):
     for line in lines:
         trimmed_line = line.strip()
         if not trimmed_line:
-            # pdf.ln(line_height_insight / 2) # Add small space for blank lines if desired
             continue
 
         match = subheading_regex.match(trimmed_line)
@@ -150,9 +150,9 @@ def generate_pdf(user_context, insights):
         if match:
             # It's a subheading
             pdf.ln(3) # Add space before subheading
-            pdf.set_font('Arial', 'B', 11)
+            pdf.set_font('Arial', 'B', 11) # Set font to bold for subheadings
             # Extract the actual matched group (trims potential extra chars)
-            subheading_text = next(g for g in match.groups()[3:5] if g is not None)
+            subheading_text = next(g for g in match.groups()[1:] if g is not None)
             pdf.multi_cell(0, line_height_insight, subheading_text.strip(), 0, 'L')
             pdf.set_font('Arial', '', 11) # Reset font after subheading
             pdf.ln(1) # Add small space after subheading

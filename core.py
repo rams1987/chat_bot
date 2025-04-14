@@ -4,6 +4,8 @@ from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 from dotenv import load_dotenv
 from google import genai
 from typing import Dict, Optional
+from pdf_utils import generate_pdf
+#from core import call_gemini_api
 
 # Load environment variables from .env file
 load_dotenv()
@@ -161,5 +163,34 @@ financial_advisor = FinancialAdvisor()
 def call_gemini_api(user_input: str, context: Optional[Dict] = None, chat_history=None) -> str:
     """Main function to call the Gemini API with financial context and chat history."""
     return financial_advisor.get_response(user_input, context, chat_history)
+
+def prepare_report(user_context, latest_message_content):
+    """
+    Prepare a financial report by calling the Gemini API and generating a PDF.
+    """
+    # Define the prompt for the Gemini API
+    prompt = """
+    Generate a financial report with the following structure:
+    1. **Initial Financial Insights and Recommendations**
+       - Provide a brief overview of the client's financial situation.
+    2. **Evaluating Your Current Situation**
+       - Discuss income, expenses, and financial goals.
+    3. **Detailed Budget Analysis & Recommendations**
+       - Break down the budget using the 50/30/20 rule.
+    4. **Actionable Steps & Long-Term Planning**
+       - List immediate actions and long-term strategies.
+    5. **Warnings and Areas of Concern**
+       - Highlight potential risks and areas for improvement.
+    6. **Next Steps**
+       - Summarize the key actions the client should take next.
+    """
+
+    # Call the Gemini API
+    insights = call_gemini_api(prompt, user_context)
+
+    # Generate the PDF using the structured insights
+    pdf_bytes = generate_pdf(user_context, insights)
+
+    return pdf_bytes
 
 
