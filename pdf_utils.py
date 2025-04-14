@@ -122,8 +122,12 @@ def generate_pdf(user_context, insights):
     pdf.set_font('Arial', '', 12)
     pdf.set_text_color(0, 0, 0) # Reset text color
 
+    # Process insights to remove asterisks
+    cleaned_insights = insights.replace('*', '')
+
+
     # Process insights line by line for subheading formatting
-    sanitized_insights = sanitize_text(insights)
+    sanitized_insights = sanitize_text(cleaned_insights)
     # Replace potential markdown-like list markers with a latin-1 compatible character
     sanitized_insights = sanitized_insights.replace('\n-', '\n- ').replace('\n*', '\n- ') # Ensure space after hyphen
     

@@ -44,15 +44,15 @@ def subheading_matching(lines):
 # Example usage
 if __name__ == "__main__":
     test_lines = [
-        "- *1. Initial Financial Insights and Recommendations**",
-        "- *2. Evaluating Your Current Situation**",
-        "- *3. Detailed Budget Analysis & Recommendations**",
+        "- 1. Initial Financial Insights and Recommendations",
+        "- 2. Evaluating Your Current Situation",
+        "- 3. Detailed Budget Analysis & Recommendations",
         "Actionable Steps & Long-Term Planning",
-        "**Warnings and Areas of Concern**",
+        "Warnings and Areas of Concern",
         "Next Steps",
         "- This is a bullet point",
         "This is a normal paragraph."
     ]
-    results = test_subheading_matching(test_lines)
+    results = subheading_matching(test_lines)
     for result in results:
         print(result)
