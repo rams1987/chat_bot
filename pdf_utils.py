@@ -1,6 +1,9 @@
 import unicodedata
 from fpdf import FPDF
 import re # Import regex for more flexible subheading matching
+import logging
+
+from test import subheading_matching
 
 def sanitize_text(text: str) -> str:
     # Replace special dash-like characters with regular dash
@@ -39,11 +42,15 @@ class PDF(FPDF):
         # Page number
         self.cell(0, 10, 'Page ' + str(self.page_no()), 0, 0, 'C')
 
+
+
 def generate_pdf(user_context, insights):
     """Generate a more presentable PDF report with user context and latest insights."""
     pdf = PDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
+
+    #print(insights)
 
     # --- User Context Section --- 
     pdf.set_font('Arial', 'B', 14)
@@ -59,8 +66,8 @@ def generate_pdf(user_context, insights):
     col_width_value = 145 # Total width = 190
     line_height = 8
     table_border = 1 # Draw borders for table cells
-    header_fill_color = (230, 230, 230) # Light gray for header (if we add one)
     # Use light blue and white for alternating rows
+    header_fill_color = (230, 230, 230) # Light gray for header (if we add one)
     row_fill_colors = [(220, 230, 255), (255, 255, 255)] # Light Blue and White
     row_index = 0
 
@@ -120,34 +127,24 @@ def generate_pdf(user_context, insights):
     # Replace potential markdown-like list markers with a latin-1 compatible character
     sanitized_insights = sanitized_insights.replace('\n-', '\n- ').replace('\n*', '\n- ') # Ensure space after hyphen
     
-    # Define potential subheading patterns (case-insensitive)
-    subheading_patterns = [
-        r"Initial Financial Insights and Recommendations",
-        r"Evaluating Your Current Situation",
-        r"Detailed Budget Analysis & Recommendations",
-        r"Actionable Steps & Long-Term Planning",
-        r"Warnings and Areas of Concern",
-        r"Next Steps"
-    ]
-    # Combine into a single regex pattern for matching
-    subheading_regex = re.compile(
-        r"^\s*(\d+\.\s*)?(%s)\s*[:*.-]?\s*$" % "|".join(subheading_patterns),
-        re.IGNORECASE
-    )
-    
     lines = sanitized_insights.split('\n')
     
     pdf.set_font('Arial', '', 11) # Default font for insights
     line_height_insight = 6
 
+    print("LINES", lines)
+
     for line in lines:
-        trimmed_line = line.strip()
+        trimmed_line = line.strip()        
+        
         if not trimmed_line:
             continue
+        
+        match = subheading_matching(trimmed_line)
 
-        match = subheading_regex.match(trimmed_line)
         
         if match:
+            #print(f"matched {trimmed_line}: {match}")    
             # It's a subheading
             pdf.ln(3) # Add space before subheading
             pdf.set_font('Arial', 'B', 11) # Set font to bold for subheadings
@@ -158,11 +155,13 @@ def generate_pdf(user_context, insights):
             pdf.ln(1) # Add small space after subheading
         elif trimmed_line.startswith('- '):
             # It's a list item - indent it
+            #print(f"matched with -  {trimmed_line}: {match}")
             pdf.set_x(pdf.l_margin + 5) # Indent list items
             pdf.multi_cell(0, line_height_insight, trimmed_line, 0, 'L')
             pdf.set_x(pdf.l_margin) # Reset indent
             pdf.ln(0.5) # Smaller space between list items
         else:
+            #print(f"matched normal paragraph{trimmed_line}: {match}")
             # It's a normal paragraph line
             pdf.multi_cell(0, line_height_insight, trimmed_line, 0, 'L')
             pdf.ln(1) # Space after normal paragraphs
