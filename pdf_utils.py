@@ -131,26 +131,45 @@ def generate_pdf(user_context, insights):
     # Replace potential markdown-like list markers with a latin-1 compatible character
     sanitized_insights = sanitized_insights.replace('\n-', '\n- ').replace('\n*', '\n- ') # Ensure space after hyphen
     
+    # Define potential subheading patterns (case-insensitive)
+    subheading_patterns = [
+        r"Initial Financial Insights and Recommendations",
+        r"Evaluating Your Current Situation",
+        r"Detailed Budget Analysis & Recommendations",
+        r"Actionable Steps & Long-Term Planning",
+        r"Warnings and Areas of Concern",
+        r"Next Steps"
+    ]
+    # Combine into a single regex pattern for matching
+    subheading_regex = re.compile(
+        r"^\s*(\d+\.\s*)?(%s)\s*[:*.-]?\s*$" % "|".join(subheading_patterns),
+        re.IGNORECASE
+    )
+
     lines = sanitized_insights.split('\n')
     
     pdf.set_font('Arial', '', 11) # Default font for insights
     line_height_insight = 6
 
-    print("LINES", lines)
+    # Keep track of current state
+    in_subheading_section = False
+    paragraph_number = 1  # Counter for numbering paragraphs
 
     for line in lines:
-        trimmed_line = line.strip()        
-        
+        trimmed_line = line.strip()
         if not trimmed_line:
             continue
-        
-        match = subheading_matching(trimmed_line)
 
+        match = subheading_regex.match(trimmed_line)
         
         if match:
-            #print(f"matched {trimmed_line}: {match}")    
-            # It's a subheading
-            pdf.ln(3) # Add space before subheading
+            logging.debug(f"Matched subheading: {trimmed_line}")  # Debugging output
+            # It's a subheading - reset paragraph numbering
+            in_subheading_section = True
+            paragraph_number = 1
+            
+            # Add space before subheading
+            pdf.ln(3)
             pdf.set_font('Arial', 'B', 11) # Set font to bold for subheadings
             # Extract the actual matched group (trims potential extra chars)
             subheading_text = next(g for g in match.groups()[1:] if g is not None)
@@ -158,16 +177,27 @@ def generate_pdf(user_context, insights):
             pdf.set_font('Arial', '', 11) # Reset font after subheading
             pdf.ln(1) # Add small space after subheading
         elif trimmed_line.startswith('- '):
-            # It's a list item - indent it
-            #print(f"matched with -  {trimmed_line}: {match}")
+            # It's a list item - indent it but don't number it
             pdf.set_x(pdf.l_margin + 5) # Indent list items
             pdf.multi_cell(0, line_height_insight, trimmed_line, 0, 'L')
             pdf.set_x(pdf.l_margin) # Reset indent
             pdf.ln(0.5) # Smaller space between list items
         else:
-            #print(f"matched normal paragraph{trimmed_line}: {match}")
-            # It's a normal paragraph line
-            pdf.multi_cell(0, line_height_insight, trimmed_line, 0, 'L')
+            # It's a normal paragraph line - number it if in a subheading section and not already numbered
+            if in_subheading_section and len(trimmed_line) > 3:  # Only number substantive paragraphs
+                # Check if the line already starts with a number (like "1." or "2)")
+                already_numbered = re.match(r'^\d+[\.\)]', trimmed_line)
+                
+                if already_numbered:
+                    # Line already has numbering, use it as is
+                    pdf.multi_cell(0, line_height_insight, trimmed_line, 0, 'L')
+                else:
+                    # Add our numbering
+                    numbered_line = f"{paragraph_number}. {trimmed_line}"
+                    paragraph_number += 1
+                    pdf.multi_cell(0, line_height_insight, numbered_line, 0, 'L')
+            else:
+                pdf.multi_cell(0, line_height_insight, trimmed_line, 0, 'L')
             pdf.ln(1) # Space after normal paragraphs
 
     pdf.ln(5)

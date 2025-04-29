@@ -186,10 +186,10 @@ def prepare_report(user_context, latest_message_content):
     """
 
     # Call the Gemini API
-    insights = call_gemini_api(prompt, user_context)
+    #insights = call_gemini_api(prompt, user_context)
 
     # Generate the PDF using the structured insights
-    pdf_bytes = generate_pdf(user_context, insights)
+    pdf_bytes = generate_pdf(user_context, latest_message_content)
 
     return pdf_bytes
 
