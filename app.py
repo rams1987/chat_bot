@@ -4,6 +4,7 @@ from typing import Dict
 import base64
 import datetime
 from pdf_utils import generate_pdf
+import os
 
 
 
@@ -90,20 +91,44 @@ def handle_chat_input(prompt: str):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    response = call_gemini_api(prompt, st.session_state.user_context)
-    
+    # Check if API key is available
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        error_msg = "❌ API Key not found! Please set GEMINI_API_KEY in Streamlit secrets."
+        with st.chat_message("assistant"):
+            st.error(error_msg)
+        st.session_state.messages.append({"role": "assistant", "content": error_msg})
+        return
 
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        message_placeholder.markdown(response)
+    try:
+        response = call_gemini_api(prompt, st.session_state.user_context)
+        
+        with st.chat_message("assistant"):
+            message_placeholder = st.empty()
+            message_placeholder.markdown(response)
 
-    st.session_state.messages.append({"role": "assistant", "content": response})
-    st.session_state.chat_sessions[st.session_state.current_session] = st.session_state.messages
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.chat_sessions[st.session_state.current_session] = st.session_state.messages
+        
+    except Exception as e:
+        error_msg = f"❌ Error generating response: {str(e)}"
+        with st.chat_message("assistant"):
+            st.error(error_msg)
+        st.session_state.messages.append({"role": "assistant", "content": error_msg})
+        st.session_state.chat_sessions[st.session_state.current_session] = st.session_state.messages
 
 def main():
     st.set_page_config(page_title="Financial Advisor Chat", layout="wide")
     
     initialize_session_state()
+    
+    # Check API key status
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        st.error("❌ **API Key Missing!** Please set GEMINI_API_KEY in Streamlit secrets to use the chatbot.")
+        st.info("💡 **How to fix:** Go to your Streamlit Cloud app settings → Secrets → Add: `GEMINI_API_KEY = 'your_key_here'`")
+    else:
+        st.success("✅ **API Key Configured** - Chatbot is ready to use!")
     
     # Sidebar
     st.sidebar.title("🗂️ Chat Sessions")
