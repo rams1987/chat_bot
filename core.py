@@ -1,45 +1,19 @@
 import os
 import requests
-from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 from dotenv import load_dotenv
-from google import genai
+import google.generativeai as genai
 from typing import Dict, Optional
 from pdf_utils import generate_pdf
-#from core import call_gemini_api
 
 # Load environment variables from .env file
 load_dotenv()
-
-# Define the model directory
-MODEL_DIR = "models/gpt2"
-
-def load_local_model():
-    if not os.path.exists(MODEL_DIR):
-        os.makedirs(MODEL_DIR, exist_ok=True)
-        model = AutoModelForCausalLM.from_pretrained("gpt2")
-        tokenizer = AutoTokenizer.from_pretrained("gpt2")
-        model.save_pretrained(MODEL_DIR)
-        tokenizer.save_pretrained(MODEL_DIR)
-    else:
-        model = AutoModelForCausalLM.from_pretrained(MODEL_DIR)
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
-    
-    return pipeline(
-        "text-generation",
-        model=model,
-        tokenizer=tokenizer,
-        max_length=100,
-        truncation=True,
-        do_sample=True,
-        temperature=0.7
-    )
 
 class FinancialAdvisor:
     def __init__(self):
         load_dotenv()
         self.api_key = os.getenv("GEMINI_API_KEY")
-        self.client = genai.Client(api_key=self.api_key)
-        self.model = "gemini-2.0-flash"
+        genai.configure(api_key=self.api_key)
+        self.model = genai.GenerativeModel('gemini-2.0-flash')
         
     def _get_system_prompt(self) -> str:
         """Returns the system prompt defining the financial advisor's role and capabilities."""
@@ -148,10 +122,7 @@ class FinancialAdvisor:
         try:
             prompt = self._build_prompt(user_input, context, chat_history)
 
-            response = self.client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=prompt
-            )
+            response = self.model.generate_content(prompt)
             
             return response.text
         except Exception as e:

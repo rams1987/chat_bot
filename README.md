@@ -26,12 +26,17 @@ An AI-powered financial advisor chatbot built with Streamlit and Google's Gemini
    GEMINI_API_KEY=your_gemini_api_key_here
    ```
 
-3. **Run the application**
+3. **Test the setup**
+   ```bash
+   python test_deployment.py
+   ```
+
+4. **Run the application**
    ```bash
    streamlit run app.py
    ```
 
-4. **Open your browser**
+5. **Open your browser**
    Navigate to `http://localhost:8501`
 
 ## Streamlit Cloud Deployment
@@ -41,7 +46,7 @@ An AI-powered financial advisor chatbot built with Streamlit and Google's Gemini
 1. **Ensure your code is in a GitHub repository**
    ```bash
    git add .
-   git commit -m "Initial commit"
+   git commit -m "Ready for Streamlit Cloud deployment"
    git push origin main
    ```
 
@@ -52,6 +57,7 @@ An AI-powered financial advisor chatbot built with Streamlit and Google's Gemini
    ├── core.py             # Financial advisor logic
    ├── pdf_utils.py        # PDF generation utilities
    ├── requirements.txt    # Python dependencies
+   ├── test_deployment.py  # Deployment test script
    └── .streamlit/         # Streamlit configuration
    ```
 
@@ -93,30 +99,33 @@ An AI-powered financial advisor chatbot built with Streamlit and Google's Gemini
 
 ### Common Issues
 
-1. **Build fails due to missing dependencies**
-   - Ensure all packages are listed in `requirements.txt`
-   - Check that package names are correct
+1. **Import errors during build**
+   - Run `python test_deployment.py` locally to verify imports
+   - Ensure all packages in `requirements.txt` are correct
 
 2. **API key not working**
    - Verify the key is correctly added to Streamlit secrets
    - Ensure the key has proper permissions
+   - Check the format: `GEMINI_API_KEY = "your_key_here"`
 
 3. **App loads but doesn't respond**
    - Check the logs in Streamlit Cloud dashboard
    - Verify your API key is valid
+   - Test locally first to isolate issues
 
 ### Performance Tips
 
-- Streamlit Cloud has memory limits, so the app is optimized for cloud deployment
-- Large model downloads are handled efficiently
+- The app is optimized for Streamlit Cloud deployment
+- No heavy model downloads required (uses Google Gemini API)
 - PDF generation is optimized for cloud environment
 
 ## Support
 
 If you encounter issues:
-1. Check the Streamlit Cloud logs
-2. Verify your API key is working
-3. Test locally first to isolate issues
+1. Run `python test_deployment.py` to check imports
+2. Check the Streamlit Cloud logs
+3. Verify your API key is working
+4. Test locally first to isolate issues
 
 ## License
 
