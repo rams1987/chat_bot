@@ -101,17 +101,22 @@ def handle_chat_input(prompt: str):
         return
 
     try:
-        response = call_gemini_api(prompt, st.session_state.user_context)
-        
+        # Show loading message
         with st.chat_message("assistant"):
-            message_placeholder = st.empty()
-            message_placeholder.markdown(response)
+            with st.spinner("🤔 Thinking..."):
+                response = call_gemini_api(prompt, st.session_state.user_context)
+        
+        # Display response
+        with st.chat_message("assistant"):
+            st.markdown(response)
 
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.chat_sessions[st.session_state.current_session] = st.session_state.messages
         
     except Exception as e:
         error_msg = f"❌ Error generating response: {str(e)}"
+        st.error(f"Debug info: {type(e).__name__}: {str(e)}")
+        
         with st.chat_message("assistant"):
             st.error(error_msg)
         st.session_state.messages.append({"role": "assistant", "content": error_msg})

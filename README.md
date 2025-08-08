@@ -54,6 +54,7 @@ An AI-powered financial advisor chatbot built with Streamlit and Google's Gemini
    ```
    chat_bot/
    ├── app.py              # Main Streamlit application
+   ├── app_debug.py        # Debug version for troubleshooting
    ├── core.py             # Financial advisor logic
    ├── pdf_utils.py        # PDF generation utilities
    ├── requirements.txt    # Python dependencies
@@ -97,6 +98,43 @@ An AI-powered financial advisor chatbot built with Streamlit and Google's Gemini
 
 ## Troubleshooting
 
+### Chat Not Responding (API Key Configured)
+
+If you see "✅ API Key Configured" but chat isn't responding:
+
+1. **Deploy Debug App**
+   - Create a new Streamlit Cloud app using `app_debug.py` as the main file
+   - This will show you exactly what's wrong with the API calls
+
+2. **Check API Key Format**
+   - Ensure your API key starts with "AI" (for Google AI Studio keys)
+   - Make sure there are no extra spaces or characters
+
+3. **Test API Key Locally**
+   ```bash
+   # Create a simple test
+   python -c "
+   import os
+   from dotenv import load_dotenv
+   import google.generativeai as genai
+   
+   load_dotenv()
+   api_key = os.getenv('GEMINI_API_KEY')
+   print(f'API Key found: {api_key[:10]}...' if api_key else 'No API key')
+   
+   if api_key:
+       genai.configure(api_key=api_key)
+       model = genai.GenerativeModel('gemini-2.0-flash')
+       response = model.generate_content('Hello')
+       print(f'Response: {response.text}')
+   "
+   ```
+
+4. **Common Issues**
+   - **API Quota Exceeded**: Check your Google AI Studio usage
+   - **Invalid Model**: The app uses 'gemini-2.0-flash', ensure it's available
+   - **Network Issues**: Try refreshing the page or waiting a moment
+
 ### Common Issues
 
 1. **Import errors during build**
@@ -123,9 +161,10 @@ An AI-powered financial advisor chatbot built with Streamlit and Google's Gemini
 
 If you encounter issues:
 1. Run `python test_deployment.py` to check imports
-2. Check the Streamlit Cloud logs
-3. Verify your API key is working
-4. Test locally first to isolate issues
+2. Deploy `app_debug.py` to identify API issues
+3. Check the Streamlit Cloud logs
+4. Verify your API key is working
+5. Test locally first to isolate issues
 
 ## License
 
