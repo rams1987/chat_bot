@@ -1,3 +1,7 @@
 streamlit
 transformers
-torch 
+torch
+google-generativeai
+python-dotenv
+fpdf
+requests 
